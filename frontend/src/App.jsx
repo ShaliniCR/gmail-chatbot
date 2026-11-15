@@ -35,7 +35,16 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: nextMessages }),
       });
-      if (!resp.ok) throw new Error(`Request failed: ${resp.status}`);
+      if (!resp.ok) {
+        let errorMsg = `Request failed: ${resp.status}`;
+        try {
+          const errData = await resp.json();
+          if (errData && errData.detail) {
+            errorMsg = typeof errData.detail === "string" ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch {}
+        throw new Error(errorMsg);
+      }
       const data = await resp.json();
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch (err) {

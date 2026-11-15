@@ -63,7 +63,8 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    messages: list[ChatMessage]
+    messages: list[ChatMessage] | None = None
+    message: str | None = None
 
 
 def get_anthropic_client() -> anthropic.Anthropic:
@@ -116,15 +117,20 @@ def health():
 
 @app.post("/api/chat")
 def chat(req: ChatRequest):
-    if not req.messages:
-        raise HTTPException(status_code=400, detail="messages must not be empty")
+    if req.messages:
+        claude_messages = [{"role": m.role, "content": m.content} for m in req.messages]
+    elif req.message:
+        claude_messages = [{"role": "user", "content": req.message}]
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Request body must include either 'messages' or 'message'.",
+        )
 
     client = get_anthropic_client()
     dashboard_data = fetch_dashboard_data()
 
     system = SYSTEM_PROMPT + "\n\nCurrent dashboard data (JSON):\n" + json.dumps(dashboard_data, indent=2)
-
-    claude_messages = [{"role": m.role, "content": m.content} for m in req.messages]
 
     try:
         response = client.messages.create(
@@ -133,6 +139,18 @@ def chat(req: ChatRequest):
             system=system,
             messages=claude_messages,
         )
+    except anthropic.AuthenticationError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Claude API Authentication Error (401 invalid x-api-key): "
+                "Your ANTHROPIC_API_KEY is invalid. Please make sure you are using an API key from "
+                "https://console.anthropic.com/settings/keys (starts with 'sk-ant-api03-...'), "
+                "not a Claude.ai user session token."
+            ),
+        ) from e
+    except anthropic.RateLimitError as e:
+        raise HTTPException(status_code=429, detail=f"Claude API Rate Limit Exceeded: {e}") from e
     except anthropic.APIError as e:
         raise HTTPException(status_code=502, detail=f"Claude API error: {e}") from e
 
