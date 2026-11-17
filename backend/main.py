@@ -30,7 +30,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 TRAINER_API_KEY = os.environ.get("TRAINER_API_KEY")
-DEFAULT_MODEL = "claude-opus-5-5"
+DEFAULT_MODEL = "claude-sonnet-5-5"
 # Older Claude 3.x model IDs (e.g. claude-3-5-sonnet-20241022) are retired and return 404,
 # which surfaced as a 502 from /api/chat. Ignore a stale value if one is still configured.
 _configured_model = (os.environ.get("ANTHROPIC_MODEL") or "").strip()
