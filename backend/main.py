@@ -30,7 +30,11 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 TRAINER_API_KEY = os.environ.get("TRAINER_API_KEY")
-MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+DEFAULT_MODEL = "claude-opus-5-5"
+# Older Claude 3.x model IDs (e.g. claude-3-5-sonnet-20241022) are retired and return 404,
+# which surfaced as a 502 from /api/chat. Ignore a stale value if one is still configured.
+_configured_model = (os.environ.get("ANTHROPIC_MODEL") or "").strip()
+MODEL = DEFAULT_MODEL if (not _configured_model or _configured_model.startswith("claude-3")) else _configured_model
 DASHBOARD_API_BASE = os.environ.get(
     "DASHBOARD_API_BASE", "https://trainer-central-assigments-api.onrender.com"
 )
@@ -135,7 +139,7 @@ def chat(req: ChatRequest):
     try:
         response = client.messages.create(
             model=MODEL,
-            max_tokens=1024,
+            max_tokens=16000,
             system=system,
             messages=claude_messages,
         )
@@ -149,10 +153,25 @@ def chat(req: ChatRequest):
                 "not a Claude.ai user session token."
             ),
         ) from e
+    except anthropic.NotFoundError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"Claude model '{MODEL}' was not found (it may be retired). "
+                f"Set ANTHROPIC_MODEL to a current model such as '{DEFAULT_MODEL}'. Details: {e.message}"
+            ),
+        ) from e
+    except anthropic.BadRequestError as e:
+        raise HTTPException(status_code=502, detail=f"Claude API rejected the request: {e.message}") from e
     except anthropic.RateLimitError as e:
-        raise HTTPException(status_code=429, detail=f"Claude API Rate Limit Exceeded: {e}") from e
-    except anthropic.APIError as e:
-        raise HTTPException(status_code=502, detail=f"Claude API error: {e}") from e
+        raise HTTPException(status_code=429, detail=f"Claude API Rate Limit Exceeded: {e.message}") from e
+    except anthropic.APIStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Claude API error ({e.status_code}): {e.message}") from e
+    except anthropic.APIConnectionError as e:
+        raise HTTPException(status_code=502, detail=f"Could not reach the Claude API: {e}") from e
+
+    if response.stop_reason == "refusal":
+        return {"reply": "Sorry, I can't help with that request."}
 
     reply = "".join(block.text for block in response.content if block.type == "text").strip()
     return {"reply": reply}

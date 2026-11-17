@@ -72,7 +72,7 @@ If you prefer to configure the service manually in the Render dashboard:
 4. Expand **Advanced** > **Environment Variables** and add:
    - `PYTHON_VERSION` = `3.11.9`
    - `ANTHROPIC_API_KEY` = `<your-anthropic-api-key>`
-   - `ANTHROPIC_MODEL` = `claude-3-5-sonnet-20241022`
+   - `ANTHROPIC_MODEL` = `claude-opus-5-5`
    - `TRAINER_API_KEY` = `<optional-trainer-key>`
 5. Expand **Advanced** > **Health Check Path** and set:
    - `/api/health`
@@ -126,7 +126,7 @@ Open `http://localhost:5173` in your browser. Vite automatically proxies `/api` 
 | Variable | Description | Required | Default |
 |---|---|---|---|
 | `ANTHROPIC_API_KEY` | Anthropic Claude API Key | Yes (for chat) | - |
-| `ANTHROPIC_MODEL` | Claude model name | No | `claude-3-5-sonnet-20241022` |
+| `ANTHROPIC_MODEL` | Claude model name | No | `claude-opus-5-5` |
 | `TRAINER_API_KEY` | Sent as `x-api-key` to TrainerCentral API | No | - |
 | `DASHBOARD_API_BASE` | Base URL for the TrainerCentral submissions API | No | `https://trainer-central-assigments-api.onrender.com` |
 | `PORT` | Web server port (injected automatically by Render) | No | `8000` |

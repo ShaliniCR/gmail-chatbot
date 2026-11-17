@@ -16,4 +16,4 @@ services:
       - key: TRAINER_API_KEY
         sync: false
       - key: ANTHROPIC_MODEL
-        value: claude-3-5-sonnet-20241022
+        value: claude-opus-5-5
